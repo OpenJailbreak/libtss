@@ -1,5 +1,5 @@
 /*
- * tss.c
+ * libtss-1.0 - libtss.c
  * Functions for communicating with Apple's TSS server
  *
  * Copyright (c) 2010 Joshua Hill. All Rights Reserved.
@@ -22,17 +22,29 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
 #include <curl/curl.h>
 #include <plist/plist.h>
-
-#include "libtss-1.0/libtss.h"
+#include <libtss-1.0/libtss.h>
+#include <libcrippy-1.0/libcrippy.h>
 
 #define ECID_STRSIZE 0x20
+
+int libtss_debug = 0;
+int libtss_use_apple_server = 0;
 
 typedef struct {
 	int length;
 	char* content;
 } tss_response;
+
+void tss_set_debug_level(int level) {
+	libtss_debug = level;
+}
+
+void tss_use_apple_server(int answer) {
+	libtss_use_apple_server = answer;
+}
 
 plist_t tss_create_request(plist_t build_identity, uint64_t ecid, unsigned char* nonce, int nonce_size) {
 	uint64_t unique_build_size = 0;
@@ -80,7 +92,7 @@ plist_t tss_create_request(plist_t build_identity, uint64_t ecid, unsigned char*
 		error("ERROR: Unable to get ECID\n");
 		return NULL;
 	}
-	snprintf(ecid_string, ECID_STRSIZE, FMT_qu, (long long unsigned int)ecid);
+	snprintf(ecid_string, ECID_STRSIZE, "%qx", (long long unsigned int)ecid);
 
 	// Add build information to TSS request
 	plist_t tss_request = plist_new_dict();
@@ -196,7 +208,7 @@ plist_t tss_send_request(plist_t tss_request) {
 		curl_easy_setopt(handle, CURLOPT_POSTFIELDS, request);
 		curl_easy_setopt(handle, CURLOPT_USERAGENT, "InetURL/1.0");
 		curl_easy_setopt(handle, CURLOPT_POSTFIELDSIZE, strlen(request));
-		if (tss_use_apple_server==0) {
+		if (libtss_use_apple_server==0) {
 			curl_easy_setopt(handle, CURLOPT_URL, "http://cydia.saurik.com/TSS/controller?action=2");
 		} else {
 			curl_easy_setopt(handle, CURLOPT_URL, "http://gs.apple.com/TSS/controller?action=2");
